@@ -97,8 +97,9 @@ Recommended repository settings for the canonical maintainer:
 - restrict the Codex GitHub App to this selected repository rather than all
   present and future repositories;
 - remove collaborators who no longer require write access;
-- protect `main` with a ruleset requiring pull requests, Code Owner review and
-  the `validate` status check;
+- keep the active `Protect main` ruleset requiring pull requests and the
+  current `validate` status check; add mandatory Code Owner review only after
+  an independent reviewer is available;
 - block force pushes and branch deletion;
 - keep Actions' default token read-only and prevent Actions from approving
   pull requests;
