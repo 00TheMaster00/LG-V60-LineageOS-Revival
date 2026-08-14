@@ -28,10 +28,13 @@ def sha256_file(path: Path) -> str:
 
 def render() -> str:
     paths = sorted(
-        path for path in ROOT.rglob("*")
-        if path.is_file()
-        and path != MANIFEST
-        and not (set(path.relative_to(ROOT).parts) & SKIP_PARTS)
+        (
+            path for path in ROOT.rglob("*")
+            if path.is_file()
+            and path != MANIFEST
+            and not (set(path.relative_to(ROOT).parts) & SKIP_PARTS)
+        ),
+        key=lambda path: path.relative_to(ROOT).as_posix().casefold(),
     )
     return "".join(
         f"{sha256_file(path)}  {path.relative_to(ROOT).as_posix()}\n" for path in paths
