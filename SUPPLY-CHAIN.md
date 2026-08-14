@@ -48,6 +48,7 @@ python -m unittest discover -s DIY/06-LG-Camera/tests -v
 python -m unittest discover -s DIY/01-Recovery-Backup/tests -v
 python -m unittest discover -s tools/tests -v
 bash DIY/05-Performance-Kernel/workflow/tests/syntax-check.sh
+bash -n DIY/06-LG-Camera/source/native/build_surface_usage_shim.sh
 ```
 
 Read scripts before running them. No public script should contain a real
@@ -73,9 +74,12 @@ input and compare the final hash.
 
 For source-level review, follow
 [the local camera audit](DIY/06-LG-Camera/SOURCE-AUDIT.md). It validates exact
-uncompressed APK-entry and normalized Smali hashes. Public CI exercises the
-audit algorithms and a successful synthetic patch but cannot contain the
-proprietary stock APK needed for a full Candidate 24 reconstruction.
+uncompressed APK-entry and normalized Smali hashes. The
+[native recipe](DIY/06-LG-Camera/source/native/NATIVE-BUILD.md) also pins the
+AOSP toolchain/header inputs and reproduces the project-authored JNI library's
+exact ELF and hash. Public CI exercises the audit algorithms, recipe guards
+and a successful synthetic patch but cannot contain the proprietary stock APK
+needed for a full Candidate 24 reconstruction.
 
 ## GitHub Actions boundary
 

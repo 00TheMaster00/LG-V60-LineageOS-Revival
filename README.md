@@ -55,8 +55,8 @@ On the documented SoftBank A001LG handset, the work:
   main/ultrawide/front capture, Manual Camera and Video, Portrait fallback,
   Sticker, Story, 1080p60, 4K60, 1080p240, real 8K stop/save, a quick
   resolution strip, and improved main-camera output dimensions;
-- traced the original charging fault to the aged battery rather than a kernel
-  charging policy; battery replacement resolved it.
+- observed that replacing the old original battery resolved the charging
+  fault, which is consistent with battery aging; no kernel override was needed.
 
 ## Start here
 
@@ -96,8 +96,8 @@ each user to supply only images read from their own phone.
 - **Camera:** byte-exact reconstruction is possible when the exact stock APK
   hash is supplied. The public builder rejects every other input and verifies
   the final Candidate 24 hash before installation. Exact APK-entry and
-  semantic Smali manifests plus project-authored shim source provide a local
-  [source-audit path](DIY/06-LG-Camera/SOURCE-AUDIT.md).
+  semantic Smali manifests plus a byte-exact project-authored JNI rebuild
+  provide a local [source-audit path](DIY/06-LG-Camera/SOURCE-AUDIT.md).
 - **Kernel:** the two source patches, base commit, toolchain identity, DTB
   tooling, profile scripts and functional tests are public. The user must
   supply the running configuration and their own boot image.

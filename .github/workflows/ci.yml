@@ -19,8 +19,24 @@ jobs:
         run: python -m pip install --no-binary=bsdiff4 --require-hashes -r DIY/06-LG-Camera/requirements-camera-hashed.txt
       - name: Camera builder unit tests
         run: python -m unittest discover -s DIY/06-LG-Camera/tests -v
+      - name: Native camera recipe syntax
+        run: bash -n DIY/06-LG-Camera/source/native/build_surface_usage_shim.sh
       - name: Performance workflow tests
         run: bash DIY/05-Performance-Kernel/workflow/tests/syntax-check.sh
+      - name: PowerShell installer syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'DIY/05-Performance-Kernel/workflow/Install-V60Profiles.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
       - name: Recovery tool tests
         run: python -m unittest discover -s DIY/01-Recovery-Backup/tests -v
       - name: Public-release tool tests

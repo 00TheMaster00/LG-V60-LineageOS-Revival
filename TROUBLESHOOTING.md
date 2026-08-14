@@ -96,10 +96,12 @@ Do not remove Qualcomm LMH/DCVSH or thermal limits to make a benchmark pass.
 ## Charging
 
 The documented phone stopped taking meaningful power at intermediate charge
-levels. Replacing its old original battery resolved the problem. Before any
-kernel charging change, test a known-good cable/charger, USB-C port, battery
-temperature/health and known-good battery. Never disable charge-voltage,
-battery-authentication or thermal safety logic to hide a failing cell.
+levels. Replacing its old original battery resolved the problem, which is
+consistent with battery aging but does not prove it was the sole possible
+cause. Before any kernel charging change, test a known-good cable/charger,
+USB-C port, battery temperature/health and known-good battery. Never disable
+charge-voltage, battery-authentication or thermal safety logic to hide a
+failing cell.
 
 ## Evidence safe to share
 
@@ -114,4 +116,3 @@ Share the smallest sanitized set:
 
 Do not share device serials, phone numbers, IMEI/MEID, QCN/EFS, partition
 images, DRM/persist/FTM, proprietary APK/firmware, faces, GPS EXIF or raw logs.
-

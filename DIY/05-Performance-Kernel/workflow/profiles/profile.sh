@@ -212,6 +212,31 @@ set_gpu_maximum() {
     write_node "$KGSL/force_no_nap" 1
 }
 
+set_gpu_daily() {
+    CAP="$(select_gpu_at_or_below 587000000)"
+    LOW="$(lowest_gpu_frequency)"
+    CAP_LEVEL="$(gpu_level_for_frequency "$CAP" 2>/dev/null || true)"
+    LOW_LEVEL="$(gpu_level_for_frequency "$LOW" 2>/dev/null || true)"
+    for VALUE in "$CAP" "$LOW" "$CAP_LEVEL" "$LOW_LEVEL"; do
+        case "$VALUE" in
+            ''|*[!0-9]*) echo "ERROR: Cannot determine the Daily GPU range."; return 1 ;;
+        esac
+    done
+    echo "Daily GPU range: $LOW-$CAP Hz"
+    write_node "$GPU/min_freq" "$LOW"
+    write_node "$GPU/max_freq" "$CAP"
+    if grep -qw msm-adreno-tz "$GPU/available_governors" 2>/dev/null; then
+        write_node "$GPU/governor" msm-adreno-tz
+    fi
+    write_node "$KGSL/min_pwrlevel" "$LOW_LEVEL"
+    write_node "$KGSL/max_pwrlevel" "$CAP_LEVEL"
+    write_node "$KGSL/default_pwrlevel" "$CAP_LEVEL"
+    write_node "$KGSL/force_bus_on" 0
+    write_node "$KGSL/force_clk_on" 0
+    write_node "$KGSL/force_rail_on" 0
+    write_node "$KGSL/force_no_nap" 0
+}
+
 set_gpu_power_save() {
     CAP="$(select_gpu_at_or_below 400000000)"
     LOW="$(lowest_gpu_frequency)"
@@ -278,14 +303,16 @@ case "$MODE" in
     daily)
         echo "Applying V60 DAILY profile..."
         restore_baseline || exit 20
-        commit_mode daily || exit 21
+        set_gpu_daily || exit 20
+        commit_mode daily-pending-bandwidth || exit 21
         ;;
     cpu)
         echo "Applying V60 CPU MAX profile..."
         restore_baseline || exit 20
+        set_gpu_daily || exit 20
         set_cpu_maximum
         set_benchmark_scheduler
-        commit_mode cpu-max || exit 21
+        commit_mode cpu-max-pending-bandwidth || exit 21
         ;;
     gpu)
         echo "Applying V60 GPU MAX 670 profile..."
@@ -314,7 +341,7 @@ case "$MODE" in
         write_node /dev/stune/top-app/schedtune.prefer_idle 0
         write_node /dev/stune/foreground/schedtune.boost 0
         write_node /dev/stune/foreground/schedtune.prefer_idle 0
-        commit_mode power-save || exit 21
+        commit_mode power-save-pending-bandwidth || exit 21
         ;;
     status) ;;
     *) echo "Usage: $0 daily|cpu|gpu|all|power|status"; exit 2 ;;

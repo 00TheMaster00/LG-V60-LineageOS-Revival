@@ -18,7 +18,7 @@ from the exact handset being repaired.
 
 | Track | User must supply | Repository supplies | Reproduction gate |
 |---|---|---|---|
-| Camera Candidate 24 | Exact EA40g stock APK, compatible `timelm` vendor stack, ADB target | Hash-pinned builder, binary delta, project-authored shim source, exact APK/Smali audit manifests, install/rollback procedure, test matrix | Stock/output hashes, signature/alignment, 25 APK-entry changes and 106 semantic Smali files verify |
+| Camera Candidate 24 | Exact EA40g stock APK, compatible `timelm` vendor stack, ADB target | Hash-pinned builder, binary delta, project-authored shim source, byte-exact native recipe, exact APK/Smali audit manifests, install/rollback procedure, test matrix | Stock/output hashes, signature/alignment, native ELF/hash, 25 APK-entry changes and 106 semantic Smali files verify |
 | Performance V1 | Pinned Lineage source, exact running config/toolchain, own boot backup | Exact source patch, build/repack method, runtime profiles | Patch applies to pinned base; build identity and functional boot tests pass |
 | GPU 670 | Same as kernel plus matching live DTB entry | Exact OPP patch, before/after fragments, FDT split/replace tools and tests | Only matching DTB entry changes; final ladder and unaffected-entry hashes verify |
 | Fingerprint DRMV2 | Credited community DRMV2 file, live GPT, own immediate backups | Successful file identity, diagnosis, one-target QFIL transaction and validation | Source size/hash match; full `drm` readback matches; physical enrollment/authentication pass |
@@ -34,6 +34,8 @@ from the exact handset being repaired.
 | Camera reconstruction delta | 13,676,109 | `4FB8A5D55E8E048AF737851D19CF98ABF1E2FC55F5AC119415E24746B3DCF485` |
 | Candidate 24 output | 101,512,334 | `E428C92DA17247F0DC3316C7EE3C1725979A242522D6618B104F81DA983CAF71` |
 | Candidate 24 signing certificate | n/a | `1E08A903AEF9C3A721510B64EC764D01D3D094EB954161B62544EA8F187B5953` |
+| Camera JNI object `surface_usage_shim.o` | 2,040 | `750DB38B0124A43143F142144B768AF73CC8FE0031FD6D58356C2C7EBD9812DC` |
+| Camera JNI library `liblgcamera_surface_usage.so` | 3,872 | `6C10BF25D9CFE3C719851D0F2951F02F06B2A47BE90E0A498509E2B9826CA5D1` |
 | Tested EA40g KDZ | user-supplied | `0121958707A73152503769913C1B724317A9CC013164361D469339CA40C3ACDE` |
 | Successful DRMV2 image | 14,680,064 | `C0FF080DA7CA569BCA190558DB444F33004D8BA58245942496495C9EDBDDF24C` |
 
@@ -67,7 +69,10 @@ device-specific metadata. Therefore:
 The implementation and failure history are documented in the
 [camera engineering notebook](Research/04-Camera-Restoration/ENGINEERING-NOTEBOOK.md).
 The [local source audit](DIY/06-LG-Camera/SOURCE-AUDIT.md) lets an owner verify
-the exact package/class/method inventory without publishing LG's source.
+the exact package/class/method inventory without publishing LG's source. The
+[native rebuild](DIY/06-LG-Camera/source/native/NATIVE-BUILD.md) separately
+reproduces the project-authored JNI library byte-for-byte with pinned AOSP
+inputs and verifies its ELF interface.
 
 Public CI proves builder success/failure logic with non-proprietary fixtures;
 it cannot run the exact Candidate 24 delta because the proprietary stock APK

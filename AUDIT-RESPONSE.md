@@ -1,8 +1,9 @@
 # Response to the 2026-08 Public Reproducibility Audit
 
-An external review rated the engineering work highly but identified nine
-material public-release weaknesses. This file records the response without
-pretending that repository changes can replace independent device testing.
+External reviews rated the engineering work highly but identified material
+public-release weaknesses in the original and follow-up audits. This file
+records the response without pretending that repository changes can replace
+independent device testing.
 
 | Finding | Response | Current status |
 |---|---|---|
@@ -15,16 +16,22 @@ pretending that repository changes can replace independent device testing.
 | Cross-flash route sounded universal | Renamed it a conversion case-study route and retained the refusal to publish copied sector coordinates. | Fixed in claims; intentionally not a universal flasher |
 | Repository governance was immature | Added Code Owners, Dependabot configuration, immutable Action SHAs, read-only workflow permissions, security/supply-chain guidance and a pinning regression test. An active `Protect main` ruleset now requires pull requests and the current `validate` check while blocking force pushes and deletion. | Materially fixed; a signed future release remains pending |
 | Privacy CI skipped `private`/`logs`/`input`/`output` | Audit and manifest now use Git's publishable file set, which includes force-added ignored files. Source-archive fallback scans those directory names too. Regression test proves a force-added ignored file is scanned. | Fixed and tested |
+| Daily mode could restore a 670 MHz baseline despite claiming a 587 MHz cap | Daily and CPU-MAX now explicitly select the highest exposed GPU frequency at or below 587 MHz, reset forced KGSL votes and restore automatic GPU-bandwidth scaling. A regression test guards both mode paths. | Fixed and tested |
+| Published JNI C++ lacked a reproducible native build | Added exact AOSP Clang/libnativehelper pins, deterministic link stubs, compile/link commands, object/library hashes and ELF-interface checks. The documented owner-run rebuild reproduces the 3,872-byte Candidate 24 entry exactly. | Fixed; exact rebuild proven owner-side |
+| Backup manifest generator could follow a symbolic link before the verifier rejected it | The generator now rejects a symlink root, output or nested entry before reading any linked bytes; a regression test covers the nested-file case. | Fixed and tested |
+| PowerShell installer parsing was owner-run only | The same parser gate now runs in the public `validate` GitHub Actions job. | Fixed in public CI |
+| Charging language overstated causality | Claims now say battery replacement resolved the observed behavior and that this is consistent with aging, without asserting a uniquely isolated cause. | Fixed in documentation |
 
 ## Validation performed after the response
 
-- camera builder/audit tests: 6 passing;
-- recovery verifier tests: 2 passing;
+- camera builder/audit tests: 7 passing;
+- recovery verifier tests: 3 passing where symlink creation is available;
 - public-file/governance tests: 2 passing;
 - performance shell/Python syntax and functional tests: passing;
 - exact owner-run Candidate 24 APK-entry audit: 25/25 changes matched;
 - exact owner-run Candidate 24 semantic Smali audit: 106/106 files matched;
-- PowerShell installer parser: passing;
+- exact owner-run JNI rebuild: object and 3,872-byte library hashes matched;
+- PowerShell installer parser: passing locally and enforced in public CI;
 - public release/privacy audit: passing;
 - local Markdown links: passing; and
 - deterministic release manifest: passing.

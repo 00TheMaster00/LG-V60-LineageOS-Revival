@@ -59,6 +59,28 @@ class RecoveryToolTests(unittest.TestCase):
             self.assertNotEqual(verified.returncode, 0)
             self.assertIn("extra: unexpected-partition.img.test-fixture", verified.stdout)
 
+    def test_generator_rejects_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            target = root / "partition.img.test-fixture"
+            target.write_bytes(b"fixture")
+            link = root / "linked-partition.img.test-fixture"
+            try:
+                link.symlink_to(target)
+            except OSError as error:
+                self.skipTest(f"symlink creation unavailable: {error}")
+
+            manifest = root / "SHA256SUMS.csv"
+            created = subprocess.run(
+                [sys.executable, str(HASHER), "--directory", str(root), "--output", str(manifest)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(created.returncode, 0)
+            self.assertIn("symlink not allowed", created.stderr)
+            self.assertFalse(manifest.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

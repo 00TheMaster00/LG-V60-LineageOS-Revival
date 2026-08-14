@@ -114,6 +114,10 @@ Run the verifier again after copying the backup to a second physical disk.
 The manifest contains only file names, sizes and hashes; keep it private when
 the names expose device-specific information.
 
+The generator rejects symbolic links, including links to files outside the
+backup folder. Copy real partition-image bytes into the backup set; do not use
+links to make a manifest appear complete.
+
 ## Recovery-set acceptance checklist
 
 - QFIL enumerated every expected UFS LUN.

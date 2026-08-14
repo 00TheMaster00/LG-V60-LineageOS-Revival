@@ -7,6 +7,9 @@ not LG's decompiled application tree.
   `classes3.dex`.
 - `native/surface_usage_shim.cpp` contains the JNI bridge used by
   `SurfaceUsageShim.smali`.
+- `native/build_surface_usage_shim.sh` and `native/NATIVE-BUILD.md` provide a
+  pinned, byte-exact owner-run rebuild and ELF/hash verification path for that
+  JNI bridge.
 
 These files are covered by the repository's MIT license. Names and method
 signatures intentionally match APIs expected by LG Camera, but the minimal
@@ -18,5 +21,6 @@ recorded in `../audit/expected-apk-entry-changes.csv` and it is reconstructed
 only through the exact-input binary delta.
 
 The source directory is for security review and future clean-room maintenance.
-It is not a standalone APK build system: the complete proprietary app must be
-supplied by its owner and is reconstructed through the verified builder.
+The JNI library is independently buildable from this project-authored source;
+the complete APK is not, because the proprietary app must be supplied by its
+owner and reconstructed through the verified builder.

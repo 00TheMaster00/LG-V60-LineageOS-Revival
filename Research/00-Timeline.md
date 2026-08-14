@@ -59,6 +59,8 @@
 
 - Charging stalls were initially investigated as possible ROM/kernel policy.
 - Replacing the old original battery resolved charging behavior.
+- That result is consistent with battery aging, not proof that cell aging was
+  the only possible cause.
 - No charge-current bypass, thermal override or charging-kernel hack was
   accepted.
 

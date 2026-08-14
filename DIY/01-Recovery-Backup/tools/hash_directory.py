@@ -26,6 +26,11 @@ def main() -> int:
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
 
+    if args.directory.is_symlink():
+        parser.error(f"symlink not allowed: {args.directory}")
+    if args.output.is_symlink():
+        parser.error(f"symlink not allowed: {args.output}")
+
     directory = args.directory.resolve()
     output = args.output.resolve()
     if not directory.is_dir():
@@ -33,10 +38,16 @@ def main() -> int:
     if output.parent != directory:
         parser.error("write the manifest inside the directory being hashed")
 
-    files = sorted(
-        path for path in directory.rglob("*")
+    entries = sorted(directory.rglob("*"))
+    symlinks = [path for path in entries if path.is_symlink()]
+    if symlinks:
+        relative = symlinks[0].relative_to(directory).as_posix()
+        parser.error(f"symlink not allowed: {relative}")
+
+    files = [
+        path for path in entries
         if path.is_file() and path.resolve() != output
-    )
+    ]
     if not files:
         parser.error("the directory contains no files")
 
@@ -53,4 +64,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

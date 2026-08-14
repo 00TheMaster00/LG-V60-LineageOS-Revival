@@ -17,8 +17,9 @@ source, APK entry or decompiled tree is uploaded by the tools.
   print every changed method signature.
 - `source/classes3/` contains the ten project-authored compatibility shims
   added as `classes3.dex`.
-- `source/native/surface_usage_shim.cpp` contains the project-authored JNI
-  source corresponding to `liblgcamera_surface_usage.so`.
+- `source/native/` contains the project-authored JNI source plus a pinned
+  byte-exact build and ELF/hash verification recipe for
+  `liblgcamera_surface_usage.so`.
 
 The repository still does not publish LG's decompiled application or the
 proprietary `libmpbase.so` dependency. The exact `libmpbase.so` entry identity
@@ -110,11 +111,30 @@ you want to review. Do not paste or commit the proprietary output. The public
 [engineering notebook](../../Research/04-Camera-Restoration/ENGINEERING-NOTEBOOK.md)
 maps the important classes and candidates to their runtime reason and proof.
 
+## 4. Rebuild the project-authored native library
+
+Follow [`source/native/NATIVE-BUILD.md`](source/native/NATIVE-BUILD.md) with
+the exact pinned AOSP Clang and `libnativehelper` commits. The script must
+produce:
+
+```text
+surface_usage_shim.o:
+  750DB38B0124A43143F142144B768AF73CC8FE0031FD6D58356C2C7EBD9812DC
+liblgcamera_surface_usage.so (3,872 bytes):
+  6C10BF25D9CFE3C719851D0F2951F02F06B2A47BE90E0A498509E2B9826CA5D1
+```
+
+The second hash is the exact Candidate 24 APK-entry identity. The recipe also
+checks the SONAME, dependencies, exported JNI symbol, versioned loader imports
+and immediate-binding flag. This proves the published C++ source can produce
+the shipped native entry; it does not prove runtime compatibility on every
+ROM/vendor combination.
+
 ## What CI can and cannot prove
 
 Public CI runs successful synthetic patching, rejection gates, audit-tool
-tests, manifest checks and privacy checks. It cannot legally conjure the
-proprietary 106 MB stock APK, so it cannot execute the exact 13.7 MB release
-delta. An owner with the exact stock input can perform both exact audits above
-locally; an independent reproduction report is still required before this is
-called multi-device validated.
+tests, native-recipe pin/syntax checks, manifest checks and privacy checks. It
+cannot legally conjure the proprietary 106 MB stock APK or economically fetch
+the large pinned AOSP toolchain, so exact APK reconstruction and native binary
+rebuild remain owner-run gates. An independent reproduction report is still
+required before this is called multi-device validated.
