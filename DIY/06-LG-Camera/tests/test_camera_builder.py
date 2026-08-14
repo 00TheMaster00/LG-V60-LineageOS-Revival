@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 from pathlib import Path
 import sys
 import tempfile
@@ -44,6 +45,32 @@ class CameraBuilderTests(unittest.TestCase):
             with self.assertRaises(MODULE.VerificationError):
                 MODULE.apply_verified_patch(stock, patch, output)
             self.assertFalse(output.exists())
+
+    def test_verified_patch_success_path_is_atomic(self) -> None:
+        import bsdiff4
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            stock = root / "stock.bin"
+            patch = root / "delta.bsdiff"
+            output = root / "output.bin"
+            stock_bytes = b"synthetic stock camera fixture\n"
+            output_bytes = b"synthetic candidate camera fixture\n"
+            stock.write_bytes(stock_bytes)
+            patch.write_bytes(bsdiff4.diff(stock_bytes, output_bytes))
+
+            spec = MODULE.ArtifactSpec(
+                input_size=len(stock_bytes),
+                input_sha256=hashlib.sha256(stock_bytes).hexdigest().upper(),
+                patch_size=patch.stat().st_size,
+                patch_sha256=MODULE.sha256_file(patch),
+                output_size=len(output_bytes),
+                output_sha256=hashlib.sha256(output_bytes).hexdigest().upper(),
+            )
+            MODULE.apply_verified_patch(stock, patch, output, spec=spec)
+
+            self.assertEqual(output.read_bytes(), output_bytes)
+            self.assertFalse(list(root.glob(".candidate24-*.tmp")))
 
     def test_hash_helper(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

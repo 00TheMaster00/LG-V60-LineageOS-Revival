@@ -4,6 +4,10 @@ This path turns the project into repeatable work for another owner. Follow the
 tracks in order when doing a complete conversion; jump directly to Camera or
 Kernel only when the required baseline already exists.
 
+If you are unsure which independent track applies, begin with
+[Getting Started by Goal](../GETTING-STARTED.md). For exact required inputs and
+hashes, see the [Reproducibility Contract](../REPRODUCIBILITY.md).
+
 ## Complete order of operations
 
 1. [Safety and stop conditions](00-SAFETY-FIRST.md)
@@ -26,4 +30,3 @@ Kernel only when the required baseline already exists.
 The repository deliberately separates read-only preparation from write steps.
 A successful result on one A001LG does not make an unverified command safe on
 another V60 variant.
-

@@ -59,6 +59,8 @@
 
 - Charging stalls were initially investigated as possible ROM/kernel policy.
 - Replacing the old original battery resolved charging behavior.
+- That result is consistent with battery aging, not proof that cell aging was
+  the only possible cause.
 - No charge-current bypass, thermal override or charging-kernel hack was
   accepted.
 
@@ -89,3 +91,6 @@
   logs.
 - Verified that the public camera delta reconstructs the exact Candidate 24
   APK from the exact stock input.
+- Imported and integrity-checked two additional private engineering handoffs.
+  Their raw scripts/evidence remained private; the reusable EDL transaction
+  design was converted into sanitized public documentation.

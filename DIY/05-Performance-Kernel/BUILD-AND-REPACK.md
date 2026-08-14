@@ -124,12 +124,16 @@ make -s -C "$KERNEL_SOURCE" O="$BUILD_OUT" \
   ARCH=arm64 LLVM=1 LLVM_IAS=1 kernelrelease
 ```
 
-The recorded baseline release was
-`4.19.325-cip133-st17-perf-g29902cf733dc`. A local ELF/Image may still differ
-byte-for-byte because absolute build paths can enter debug data; source,
-semantic config, compiler, release and metadata identity remain required.
+The recorded unpatched baseline release was
+`4.19.325-cip133-st17-perf-g29902cf733dc`. After applying the two patches,
+record the new `kernelrelease`; do not continue if it still identifies the
+unpatched source state. A local ELF/Image may still differ byte-for-byte
+because absolute build paths can enter debug data; source, semantic config,
+compiler, release and metadata identity remain required.
 
-Build the two Kona-v2 DTBs:
+Build the patched kernel image **and** the two Kona-v2 DTBs. `Image.gz` is the
+artifact that carries Performance V1; building only the DTBs can reproduce
+GPU 670 but cannot reproduce the CPU scheduler changes:
 
 ```bash
 make -C "$KERNEL_SOURCE" O="$BUILD_OUT" -j"$(nproc)" \
@@ -137,8 +141,9 @@ make -C "$KERNEL_SOURCE" O="$BUILD_OUT" -j"$(nproc)" \
   CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm \
   OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump \
   READELF=llvm-readelf STRIP=llvm-strip \
-  qcom/kona-v2.dtb qcom/kona-v2.1.dtb
+  Image.gz qcom/kona-v2.dtb qcom/kona-v2.1.dtb
 
+sha256sum "$BUILD_OUT/arch/arm64/boot/Image.gz"
 find "$BUILD_OUT/arch/arm64/boot/dts" -type f \
   \( -name 'kona-v2.dtb' -o -name 'kona-v2.1.dtb' \) \
   -print0 | xargs -0 sha256sum
@@ -160,8 +165,20 @@ sha256sum header kernel ramdisk.cpio dtb
 ```
 
 Pull `header`, `kernel`, `ramdisk.cpio` and `dtb` back to the host. Keep all
-component hashes. The project preserved kernel and ramdisk byte-for-byte and
-replaced one indexed FDT entry only.
+component hashes.
+
+Choose and record one construction path:
+
+- **Full Performance V2 from the pinned Lineage baseline:** replace the
+  unpacked `kernel` with the newly built `Image.gz`, then replace one matching
+  DTB entry. The kernel hash is expected to change and must equal the built
+  `Image.gz` hash.
+- **GPU 670 promotion on a boot image that already contains the verified
+  Performance V1 kernel:** preserve `kernel` byte-for-byte and replace only
+  the matching DTB entry.
+
+The original V2 promotion used the second path because Performance V1 was
+already present. A clean public reproduction normally uses the first path.
 
 ## 6. Identify the active FDT entry
 
@@ -195,20 +212,34 @@ python3 workflow/tools/fdt-bundle.py replace \
 Split the new bundle and require every non-target entry hash to match the old
 bundle.
 
-## 7. Repack and prove component preservation
+## 7. Install the selected kernel/DTB components and repack
 
-Inside a copy of the unpack directory, replace only the file named `dtb`, then:
+Inside a copy of the unpack directory, replace the file named `dtb`. For the
+full Performance V2 path, also replace the file named `kernel` with the built
+`Image.gz`:
 
-```sh
-magiskboot repack boot-before.img boot-gpu670.img
+```bash
+cp "$BUILD_OUT/arch/arm64/boot/Image.gz" /path/to/repack-dir/kernel
+cp /path/to/new-dtb-bundle /path/to/repack-dir/dtb
+sha256sum /path/to/repack-dir/kernel /path/to/repack-dir/dtb
 ```
 
-Unpack `boot-gpu670.img` into a second empty directory. Require:
+For the GPU-only promotion path, copy only `dtb` and prove the unpacked
+`kernel` hash stayed unchanged. Then run:
+
+```sh
+magiskboot repack boot-before.img boot-performance-v2.img
+```
+
+Unpack `boot-performance-v2.img` into a second empty directory. Require:
 
 - output size equals the live boot partition size;
 - header hash unchanged;
-- kernel hash unchanged;
 - ramdisk hash unchanged;
+- for full Performance V2, kernel hash equals the built `Image.gz` hash and
+  differs from the unpatched baseline;
+- for GPU-only promotion, kernel hash is unchanged and the input boot is
+  already proven to contain Performance V1;
 - DTB hash equals `new-dtb-bundle`;
 - output SHA-256 recorded; and
 - the rollback image remains the untouched pre-write boot backup.
@@ -227,4 +258,3 @@ semantics with your own measured values; do not substitute a hardcoded slot.
 After boot, verify boot partition hash, kernel release, available GPU
 frequencies, Wi-Fi/LTE/audio/camera/fingerprint, thermal health and logs before
 installing runtime profiles.
-

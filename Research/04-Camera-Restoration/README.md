@@ -1,5 +1,11 @@
 # LG Camera Restoration Engineering Narrative
 
+For the detailed phase history, class-level compatibility ledger, failed
+candidates and complete proof matrix, read the
+[Camera Compatibility Engineering Notebook](ENGINEERING-NOTEBOOK.md).
+For exact package/class/method verification against locally owned APKs, use
+the [Candidate 24 source audit](../../DIY/06-LG-Camera/SOURCE-AUDIT.md).
+
 ## Scope
 
 The goal was to run LG Camera 9.91.3 from EA40g on LineageOS 23.2/Android 16
@@ -101,5 +107,6 @@ allowing the in-camera HD/FHD/FHD60/4K/4K60/8K strip to expand.
   was face-down over the front camera.
 
 The public DIY route distributes a verified delta, not an LG APK. The delta
-reconstructed the exact promoted Candidate 24 during release validation.
-
+reconstructed the exact promoted Candidate 24 during owner-run release
+validation. Public CI validates the transformation engine with synthetic data;
+an independent owner reproduction is still pending.

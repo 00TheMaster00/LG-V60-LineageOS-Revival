@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import hashlib
 import os
 from pathlib import Path
@@ -17,6 +18,26 @@ PATCH_SHA256 = "4FB8A5D55E8E048AF737851D19CF98ABF1E2FC55F5AC119415E24746B3DCF485
 OUTPUT_SIZE = 101_512_334
 OUTPUT_SHA256 = "E428C92DA17247F0DC3316C7EE3C1725979A242522D6618B104F81DA983CAF71"
 CHUNK_SIZE = 8 * 1024 * 1024
+
+
+@dataclass(frozen=True)
+class ArtifactSpec:
+    input_size: int
+    input_sha256: str
+    patch_size: int
+    patch_sha256: str
+    output_size: int
+    output_sha256: str
+
+
+CANDIDATE24_SPEC = ArtifactSpec(
+    input_size=INPUT_SIZE,
+    input_sha256=INPUT_SHA256,
+    patch_size=PATCH_SIZE,
+    patch_sha256=PATCH_SHA256,
+    output_size=OUTPUT_SIZE,
+    output_sha256=OUTPUT_SHA256,
+)
 
 
 class VerificationError(RuntimeError):
@@ -46,9 +67,15 @@ def verify_file(path: Path, expected_size: int, expected_hash: str, label: str) 
         )
 
 
-def apply_verified_patch(stock: Path, patch: Path, output: Path, force: bool = False) -> None:
-    verify_file(stock, INPUT_SIZE, INPUT_SHA256, "EA40g stock APK")
-    verify_file(patch, PATCH_SIZE, PATCH_SHA256, "Candidate 24 delta")
+def apply_verified_patch(
+    stock: Path,
+    patch: Path,
+    output: Path,
+    force: bool = False,
+    spec: ArtifactSpec = CANDIDATE24_SPEC,
+) -> None:
+    verify_file(stock, spec.input_size, spec.input_sha256, "EA40g stock APK")
+    verify_file(patch, spec.patch_size, spec.patch_sha256, "Candidate 24 delta")
 
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists() and not force:
@@ -69,7 +96,12 @@ def apply_verified_patch(stock: Path, patch: Path, output: Path, force: bool = F
             temporary = Path(handle.name)
 
         bsdiff4.file_patch(str(stock), str(temporary), str(patch))
-        verify_file(temporary, OUTPUT_SIZE, OUTPUT_SHA256, "generated Candidate 24 APK")
+        verify_file(
+            temporary,
+            spec.output_size,
+            spec.output_sha256,
+            "generated Candidate 24 APK",
+        )
         os.replace(temporary, output)
         temporary = None
     finally:
@@ -111,4 +143,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

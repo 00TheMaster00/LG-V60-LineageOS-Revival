@@ -114,6 +114,10 @@ Run the verifier again after copying the backup to a second physical disk.
 The manifest contains only file names, sizes and hashes; keep it private when
 the names expose device-specific information.
 
+The generator rejects symbolic links, including links to files outside the
+backup folder. Copy real partition-image bytes into the backup set; do not use
+links to make a manifest appear complete.
+
 ## Recovery-set acceptance checklist
 
 - QFIL enumerated every expected UFS LUN.
@@ -127,3 +131,6 @@ the names expose device-specific information.
 
 Only after every item passes should you continue to cross-flash or recovery.
 
+If a later repair genuinely requires a partition write, follow the
+[Safe EDL Write Transaction](EDL-WRITE-TRANSACTION.md) so the operation has a
+live-map proof, immediate backup, exact readback, and unchanged-witness check.

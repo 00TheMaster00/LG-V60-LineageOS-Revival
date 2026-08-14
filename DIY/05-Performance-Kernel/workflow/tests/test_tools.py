@@ -15,6 +15,8 @@ FDT_TOOL = ROOT / "tools" / "fdt-bundle.py"
 CLONE_TOOL = ROOT / "tools" / "clone-vendor-gpu-bin.py"
 BEFORE = ROOT / "patches" / "speed-bin0-before.dtsi.fragment"
 AFTER = ROOT / "patches" / "speed-bin0-after.dtsi.fragment"
+PROFILE = ROOT / "profiles" / "profile.sh"
+WRAPPER = ROOT / "profiles" / "wrapper.sh"
 
 
 def load_module(path: Path, name: str):
@@ -80,9 +82,26 @@ def test_clone_vendor_bin() -> None:
         assert result.strip() == expected
 
 
+def test_daily_profile_enforces_587_cap() -> None:
+    profile = PROFILE.read_text(encoding="utf-8")
+    wrapper = WRAPPER.read_text(encoding="utf-8")
+    assert "set_gpu_daily()" in profile
+    assert 'CAP="$(select_gpu_at_or_below 587000000)"' in profile
+    mode_cases = profile.split('case "$MODE" in', 1)[1]
+    daily_case = mode_cases.split("daily)", 1)[1].split(";;", 1)[0]
+    cpu_case = mode_cases.split("cpu)", 1)[1].split(";;", 1)[0]
+    assert "set_gpu_daily" in daily_case
+    assert "set_gpu_daily" in cpu_case
+    assert 'daily) "$PROFILE" daily; "$BUS" auto; echo daily > "$MODE_FILE" ;;' in wrapper
+    assert 'cpu) "$PROFILE" cpu; "$BUS" auto; echo cpu-max > "$MODE_FILE" ;;' in wrapper
+    assert "daily-pending-bandwidth" in daily_case
+    assert "cpu-max-pending-bandwidth" in cpu_case
+
+
 def main() -> int:
     test_fdt_bundle()
     test_clone_vendor_bin()
+    test_daily_profile_enforces_587_cap()
     print("Functional tool tests: PASS")
     return 0
 

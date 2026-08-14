@@ -127,7 +127,9 @@ does not match the script's assumptions, adapt and review it first.
 The host-side build only makes capabilities available. The profile scripts
 offer Daily, Power Save, CPU-MAX, GPU-MAX and ALL-MAX modes. Install them only
 after the custom boot passes basic stability. Profiles require root and write
-to sysfs; verify every node exists on the running kernel.
+to sysfs; verify every node exists on the running kernel. Use the supplied
+serial-bound [profile installer](workflow/README.md), which captures the
+target's actual baseline and fails closed when restoration is incomplete.
 
 The documented owner's conclusion is the practical default:
 
