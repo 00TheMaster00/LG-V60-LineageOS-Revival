@@ -6,6 +6,12 @@ This directory supplies a verified binary transformation: you provide the
 exact EA40g stock APK you are entitled to use, and the builder reconstructs
 the byte-exact tested output locally.
 
+Reviewers are not limited to trusting a binary delta. The
+[source-audit path](SOURCE-AUDIT.md) verifies every changed APK entry, 106
+semantic Smali files and affected method signatures locally. The ten
+project-authored `classes3.dex` shims and JNI source are published under
+[`source/`](source/); LG's proprietary decompiled tree is not.
+
 ## Exact artifact identities
 
 | Artifact | Bytes | SHA-256 |
@@ -267,6 +273,9 @@ can include local filenames and location metadata; sanitize before sharing.
 Use [VALIDATION.md](VALIDATION.md) exactly. Test basic photo and 1080p video
 before 4K60 or 8K. Keep the phone cool, ensure tens of gigabytes are free, and
 do not stress 8K while using the 670 MHz GPU profile.
+
+For engineering or security review, run [SOURCE-AUDIT.md](SOURCE-AUDIT.md)
+against the exact stock and reconstructed APKs before installation.
 
 ## Rollback
 

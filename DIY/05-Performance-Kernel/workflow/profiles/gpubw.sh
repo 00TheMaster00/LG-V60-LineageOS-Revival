@@ -1,6 +1,7 @@
 #!/system/bin/sh
 set -u
 MODE="${1:-status}"
+WRITE_FAILURES=0
 
 find_gpubw() {
     for DIR in /sys/class/devfreq/*; do
@@ -14,12 +15,14 @@ find_gpubw() {
 
 write_node() {
     NODE="$1"; VALUE="$2"
-    [ -e "$NODE" ] || { echo "MISSING: $NODE"; return 0; }
-    [ -w "$NODE" ] || { echo "READ-ONLY: $NODE"; return 0; }
+    [ -e "$NODE" ] || { echo "MISSING: $NODE"; WRITE_FAILURES=$((WRITE_FAILURES + 1)); return 1; }
+    [ -w "$NODE" ] || { echo "READ-ONLY: $NODE"; WRITE_FAILURES=$((WRITE_FAILURES + 1)); return 1; }
     if printf '%s\n' "$VALUE" > "$NODE" 2>/dev/null; then
         echo "SET: $NODE=$VALUE"
     else
         echo "REJECTED: $NODE=$VALUE"
+        WRITE_FAILURES=$((WRITE_FAILURES + 1))
+        return 1
     fi
 }
 
@@ -47,6 +50,11 @@ esac
 if grep -qw bw_vbif "$GPUBW/available_governors" 2>/dev/null; then
     write_node "$GPUBW/governor" bw_vbif
 fi
+
+[ "$WRITE_FAILURES" -eq 0 ] || {
+    echo "ERROR: GPU-bandwidth profile had $WRITE_FAILURES failed write(s)."
+    exit 20
+}
 
 echo
 echo "=== GPU BANDWIDTH ==="

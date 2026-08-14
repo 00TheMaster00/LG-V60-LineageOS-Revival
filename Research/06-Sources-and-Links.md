@@ -14,6 +14,34 @@
 Use the current device-page instructions for ROM installation. This project
 pins historical commits only for reproducibility.
 
+## Android host and APK tools
+
+- Android SDK Platform Tools (`adb` and `fastboot`):
+  <https://developer.android.com/tools/releases/platform-tools>
+- Android `apksigner` reference:
+  <https://developer.android.com/tools/apksigner>
+- Android `zipalign` reference:
+  <https://developer.android.com/tools/zipalign>
+
+Use current official Platform Tools and bind every ADB/Fastboot command to the
+intended device when more than one device is connected. For APK work, align
+before signing and verify the final signature/certificate after every byte
+change.
+
+## Camera and media APIs
+
+- Android Camera2 constrained-high-speed session API:
+  <https://developer.android.com/reference/android/hardware/camera2/CameraConstrainedHighSpeedCaptureSession>
+- Android MediaStore reference:
+  <https://developer.android.com/reference/android/provider/MediaStore>
+- Android shared-media guidance:
+  <https://developer.android.com/training/data-storage/shared/media>
+- AOSP camera documentation index:
+  <https://source.android.com/docs/core/camera>
+
+These references explain the standard Android paths used by the compatibility
+port. They do not document LG's proprietary operation modes or vendor tags.
+
 ## Fingerprint and recovery community work
 
 - XDA thread documenting the V60 DRMV2 method and its credits:
@@ -35,10 +63,32 @@ DRMV2.
 - SRLabs Android firmware extractor, including KDZ/super support:
   <https://github.com/srlabs/extractor>
 
+## Boot image, device tree and partition structure
+
+- Magisk source and MagiskBoot provenance:
+  <https://github.com/topjohnwu/Magisk>
+- Devicetree specification:
+  <https://devicetree-specification.readthedocs.io/en/stable/>
+- UEFI GUID Partition Table format:
+  <https://uefi.org/specs/UEFI/2.10/05_GUID_Partition_Table_Format.html>
+
+The project's DTB tools operate on flattened-device-tree boundaries. GPT
+validation and target resolution must still use the live handset map; a
+specification explains the structure but does not make copied coordinates
+portable.
+
+## Project navigation and verification
+
+- [Getting started by goal](../GETTING-STARTED.md)
+- [Reproducibility contract](../REPRODUCIBILITY.md)
+- [Troubleshooting](../TROUBLESHOOTING.md)
+- [Supply-chain verification](../SUPPLY-CHAIN.md)
+- [Camera engineering notebook](04-Camera-Restoration/ENGINEERING-NOTEBOOK.md)
+- [Performance engineering notebook](03-Performance-Kernel-Notebook.md)
+
 ## Tool/license note
 
 Links identify upstream projects, not bundled proprietary binaries. Review
 current upstream licenses and instructions. Never re-upload firmware, LG APKs,
 firehose programmers or private phone partitions merely because a guide links
 to an extraction method.
-

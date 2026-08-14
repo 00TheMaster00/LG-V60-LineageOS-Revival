@@ -1,5 +1,9 @@
 # Performance and GPU Research
 
+For the complete source, build-failure, LMH/DCVSH, DTB-selection,
+Magisk-preserving repack and validation record, read the
+[Performance Kernel Engineering Notebook](03-Performance-Kernel-Notebook.md).
+
 ## CPU finding
 
 Performance V1 made two bounded scheduler changes:
@@ -41,4 +45,3 @@ only that entry, and proved all unaffected entries stayed identical.
 observed mild instability in gaming, so 587 MHz is the daily/gaming default.
 This is a real, measurable extension with an explicit stability boundary—not
 a claim that every SM8250 bin will behave identically.
-

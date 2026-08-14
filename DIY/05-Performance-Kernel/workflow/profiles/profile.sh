@@ -5,29 +5,93 @@ MODE="${1:-status}"
 ROOT="/data/adb/v60profiles"
 MODE_FILE="$ROOT/active-profile"
 BASELINE="$ROOT/baseline.nodes"
+BASELINE_LOW_POWER="$ROOT/baseline.low_power"
 KGSL="/sys/class/kgsl/kgsl-3d0"
 GPU="$KGSL/devfreq"
+WRITE_FAILURES=0
 
 write_node() {
     NODE="$1"
     VALUE="$2"
     [ -e "$NODE" ] || return 0
-    [ -w "$NODE" ] || { echo "READ-ONLY: $NODE"; return 0; }
+    [ -w "$NODE" ] || {
+        echo "READ-ONLY: $NODE"
+        WRITE_FAILURES=$((WRITE_FAILURES + 1))
+        return 1
+    }
     if printf '%s\n' "$VALUE" > "$NODE" 2>/dev/null; then
         echo "SET: $NODE=$VALUE"
     else
         echo "REJECTED: $NODE=$VALUE"
+        WRITE_FAILURES=$((WRITE_FAILURES + 1))
+        return 1
     fi
 }
 
+validate_baseline() {
+    [ -s "$BASELINE" ] || {
+        echo "ERROR: Missing or empty baseline: $BASELINE"
+        echo "Run $ROOT/capture-baseline.sh before applying any profile."
+        return 1
+    }
+
+    COUNT=0
+    while IFS='|' read -r NODE VALUE EXTRA; do
+        COUNT=$((COUNT + 1))
+        case "$NODE" in
+            /sys/*|/proc/*|/dev/*) ;;
+            *) echo "ERROR: Unsafe baseline path on line $COUNT: $NODE"; return 1 ;;
+        esac
+        [ -n "$VALUE" ] || {
+            echo "ERROR: Empty baseline value on line $COUNT: $NODE"
+            return 1
+        }
+        [ -z "$EXTRA" ] || {
+            echo "ERROR: Invalid baseline record on line $COUNT: $NODE"
+            return 1
+        }
+        [ -e "$NODE" ] || {
+            echo "ERROR: Baseline node no longer exists: $NODE"
+            return 1
+        }
+        [ -w "$NODE" ] || {
+            echo "ERROR: Baseline node is no longer writable: $NODE"
+            return 1
+        }
+    done < "$BASELINE"
+
+    [ "$COUNT" -gt 0 ] || { echo "ERROR: Baseline contains no nodes."; return 1; }
+}
+
 restore_baseline() {
-    [ -r "$BASELINE" ] || { echo "ERROR: Missing baseline: $BASELINE"; return 1; }
+    validate_baseline || return 1
+    WRITE_FAILURES=0
     while IFS='|' read -r NODE VALUE; do
         [ -n "$NODE" ] || continue
-        write_node "$NODE" "$VALUE"
+        write_node "$NODE" "$VALUE" || true
     done < "$BASELINE"
-    settings put global low_power 0 2>/dev/null || true
-    cmd power set-adaptive-power-saver-enabled false 2>/dev/null || true
+    [ "$WRITE_FAILURES" -eq 0 ] || {
+        echo "ERROR: Baseline restoration had $WRITE_FAILURES failed write(s)."
+        return 1
+    }
+
+    LOW_POWER="$(cat "$BASELINE_LOW_POWER" 2>/dev/null || echo 0)"
+    case "$LOW_POWER" in 0|1) ;; *) LOW_POWER=0 ;; esac
+    settings put global low_power "$LOW_POWER" 2>/dev/null || true
+    if [ "$LOW_POWER" = "1" ]; then
+        cmd power set-adaptive-power-saver-enabled true 2>/dev/null || true
+    else
+        cmd power set-adaptive-power-saver-enabled false 2>/dev/null || true
+    fi
+}
+
+commit_mode() {
+    NAME="$1"
+    if [ "$WRITE_FAILURES" -ne 0 ]; then
+        echo "ERROR: Profile had $WRITE_FAILURES failed write(s); active state was not promoted."
+        return 1
+    fi
+    printf '%s\n' "$NAME" > "$MODE_FILE"
 }
 
 freqs_desc() {
@@ -213,34 +277,34 @@ show_status() {
 case "$MODE" in
     daily)
         echo "Applying V60 DAILY profile..."
-        restore_baseline
-        echo daily > "$MODE_FILE"
+        restore_baseline || exit 20
+        commit_mode daily || exit 21
         ;;
     cpu)
         echo "Applying V60 CPU MAX profile..."
-        restore_baseline
+        restore_baseline || exit 20
         set_cpu_maximum
         set_benchmark_scheduler
-        echo cpu-max > "$MODE_FILE"
+        commit_mode cpu-max || exit 21
         ;;
     gpu)
         echo "Applying V60 GPU MAX 670 profile..."
-        restore_baseline
+        restore_baseline || exit 20
         set_gpu_maximum
         set_benchmark_scheduler
-        echo gpu-max-670 > "$MODE_FILE"
+        commit_mode gpu-max-pending-bandwidth || exit 21
         ;;
     all)
         echo "Applying V60 ALL MAX 670 profile..."
-        restore_baseline
+        restore_baseline || exit 20
         set_cpu_maximum
         set_gpu_maximum
         set_benchmark_scheduler
-        echo all-max-670 > "$MODE_FILE"
+        commit_mode all-max-pending-bandwidth || exit 21
         ;;
     power)
         echo "Applying V60 POWER SAVE profile..."
-        restore_baseline
+        restore_baseline || exit 20
         set_cpu_power_save
         set_gpu_power_save
         settings put global low_power 1 2>/dev/null || true
@@ -250,7 +314,7 @@ case "$MODE" in
         write_node /dev/stune/top-app/schedtune.prefer_idle 0
         write_node /dev/stune/foreground/schedtune.boost 0
         write_node /dev/stune/foreground/schedtune.prefer_idle 0
-        echo power-save > "$MODE_FILE"
+        commit_mode power-save || exit 21
         ;;
     status) ;;
     *) echo "Usage: $0 daily|cpu|gpu|all|power|status"; exit 2 ;;

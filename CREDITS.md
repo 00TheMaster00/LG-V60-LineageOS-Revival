@@ -2,8 +2,15 @@
 
 ## Project
 
-- Project owner, integration, testing and publication: [The1-Master](https://github.com/The1-Master)
+- Project owner, integration, testing and publication:
+  [00TheMaster00](https://github.com/00TheMaster00)
 - Engineering assistance and documentation: OpenAI Codex
+
+The repository was initially created under the same maintainer's
+`The1-Master` account and transferred to `00TheMaster00` on 2026-08-14. Old
+Git commits and exported patch headers retain the earlier GitHub noreply
+identity so the historical record is not silently rewritten. The canonical
+repository and current credit target are `00TheMaster00`.
 
 ## Upstream and community
 
@@ -28,4 +35,3 @@ DRMV2/community method, and state which handset/ROM they actually tested.
 
 See [Research/06-Sources-and-Links.md](Research/06-Sources-and-Links.md) for
 the source index.
-

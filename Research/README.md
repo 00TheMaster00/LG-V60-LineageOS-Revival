@@ -7,8 +7,10 @@ fixes.
 1. [Project timeline](00-Timeline.md)
 2. [Recovery, cross-flash and radio](01-Recovery-Crossflash-Radio.md)
 3. [Fingerprint investigation](02-Fingerprint-Investigation/README.md)
-4. [Performance and GPU research](03-Performance-Research.md)
-5. [Camera restoration](04-Camera-Restoration/README.md)
+4. [Performance and GPU research](03-Performance-Research.md), with the
+   [full performance engineering notebook](03-Performance-Kernel-Notebook.md)
+5. [Camera restoration](04-Camera-Restoration/README.md), with the
+   [full camera engineering notebook](04-Camera-Restoration/ENGINEERING-NOTEBOOK.md)
 6. [Charging finding](05-Charging-Finding.md)
 7. [Sources and community links](06-Sources-and-Links.md)
 8. [Known limits and next research](07-Known-Limits.md)

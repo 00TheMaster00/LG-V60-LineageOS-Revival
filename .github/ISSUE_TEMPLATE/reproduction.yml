@@ -1,0 +1,69 @@
+name: Independent reproduction report
+description: Report a sanitized camera, kernel, fingerprint, radio, recovery, or conversion reproduction.
+title: "[Reproduction]: "
+labels:
+  - reproduction
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Do not attach APKs, firmware, partitions, QCN/EFS, DRM/persist, raw logs,
+        serials, IMEI, phone numbers, faces, GPS EXIF, or private download links.
+  - type: dropdown
+    id: track
+    attributes:
+      label: Track
+      options:
+        - Camera Candidate 24
+        - Performance V1 kernel
+        - GPU 670
+        - Fingerprint DRMV2
+        - Radio recovery
+        - Recovery backup tools
+        - A001LG conversion case study
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Public model/variant
+      placeholder: A001LG, LM-V600EA, LM-V600TM, etc.
+    validations:
+      required: true
+  - type: input
+    id: software
+    attributes:
+      label: ROM and vendor build
+      description: Use public build identifiers only; remove device-specific identifiers.
+    validations:
+      required: true
+  - type: textarea
+    id: hashes
+    attributes:
+      label: Public artifact hashes and checkpoints
+      description: List only hashes already intended to be public and each documented checkpoint followed.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Physical/output result
+      description: Distinguish UI entry, session creation, capture, saved output, readback, authentication, and sustained stability.
+    validations:
+      required: true
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback result
+      description: State whether rollback was rehearsed or used and whether it restored the prior state.
+    validations:
+      required: true
+  - type: checkboxes
+    id: sanitation
+    attributes:
+      label: Publication safety
+      options:
+        - label: I removed proprietary files, private partitions, identifiers, user media, private links, and unredacted logs.
+          required: true
+        - label: I understand that one successful report does not establish universal compatibility.
+          required: true

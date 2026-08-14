@@ -11,8 +11,8 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
       - name: Install camera patch dependency
@@ -23,6 +23,8 @@ jobs:
         run: bash DIY/05-Performance-Kernel/workflow/tests/syntax-check.sh
       - name: Recovery tool tests
         run: python -m unittest discover -s DIY/01-Recovery-Backup/tests -v
+      - name: Public-release tool tests
+        run: python -m unittest discover -s tools/tests -v
       - name: Public-data audit
         run: python tools/audit_public_release.py
       - name: Markdown links

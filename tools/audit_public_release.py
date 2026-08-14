@@ -6,13 +6,14 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 import re
+import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
 ALLOWED_BINARY = Path("DIY/06-LG-Camera/patches/EA40g-to-Candidate24.bsdiff")
 ALLOWED_BINARY_SIZE = 13_676_109
 ALLOWED_BINARY_HASH = "4FB8A5D55E8E048AF737851D19CF98ABF1E2FC55F5AC119415E24746B3DCF485"
-SKIP_PARTS = {".git", ".venv", "__pycache__", "input", "output", "private", "logs"}
+FALLBACK_SKIP_PARTS = {".git", ".venv", "__pycache__"}
 BLOCKED_SUFFIXES = {
     ".apk", ".apks", ".idsig", ".kdz", ".dz", ".tot", ".qcn", ".xqcn",
     ".img", ".bin", ".elf", ".mbn", ".key", ".jks", ".keystore",
@@ -24,7 +25,12 @@ TEXT_PATTERNS = {
     "probable raw LG ADB serial": re.compile(r"\bLMV[0-9A-Fa-f]{8,}\b"),
     "probable IMEI": re.compile(r"(?<![0-9A-Fa-f])[0-9]{15}(?![0-9A-Fa-f])"),
 }
-ALLOWED_EMAILS = {"315181980+The1-Master@users.noreply.github.com"}
+# Both are the project owner's GitHub noreply identities. The former account
+# remains only in historical patch headers; new public work uses 00TheMaster00.
+ALLOWED_EMAILS = {
+    "315181980+The1-Master@users.noreply.github.com",
+    "153080814+00TheMaster00@users.noreply.github.com",
+}
 EMAIL_PATTERN = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.I)
 
 
@@ -36,10 +42,28 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest().upper()
 
 
-def files() -> list[Path]:
+def files(root: Path = ROOT) -> list[Path]:
+    """Return everything that Git would publish, including force-added files."""
+    result = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+        cwd=root,
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode == 0:
+        relative_names = [name for name in result.stdout.split(b"\0") if name]
+        return sorted(
+            (root / name.decode("utf-8", errors="surrogateescape"))
+            for name in relative_names
+            if (root / name.decode("utf-8", errors="surrogateescape")).is_file()
+        )
+
+    # Source archives have no Git index. Scan all content there; do not exempt
+    # directories merely because they are commonly named private/input/logs.
     return sorted(
-        path for path in ROOT.rglob("*")
-        if path.is_file() and not (set(path.relative_to(ROOT).parts) & SKIP_PARTS)
+        path for path in root.rglob("*")
+        if path.is_file()
+        and not (set(path.relative_to(root).parts) & FALLBACK_SKIP_PARTS)
     )
 
 
@@ -48,6 +72,9 @@ def main() -> int:
     scanned = files()
     for path in scanned:
         relative = path.relative_to(ROOT)
+        if path.is_symlink():
+            failures.append(f"symlink not allowed in public release: {relative}")
+            continue
         if path.stat().st_size > 50 * 1024 * 1024:
             failures.append(f"file over 50 MiB: {relative}")
 
@@ -86,4 +113,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

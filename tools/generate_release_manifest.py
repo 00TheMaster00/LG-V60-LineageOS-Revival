@@ -7,11 +7,12 @@ import argparse
 import difflib
 import hashlib
 from pathlib import Path
+import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "SHA256SUMS.txt"
-SKIP_PARTS = {".git", ".venv", "__pycache__", "input", "output", "private", "logs"}
+FALLBACK_SKIP_PARTS = {".git", ".venv", "__pycache__"}
 
 
 def sha256_file(path: Path) -> str:
@@ -26,14 +27,30 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest().upper()
 
 
+def public_files(root: Path = ROOT) -> list[Path]:
+    result = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+        cwd=root,
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode == 0:
+        relative_names = [name for name in result.stdout.split(b"\0") if name]
+        return [
+            root / name.decode("utf-8", errors="surrogateescape")
+            for name in relative_names
+            if (root / name.decode("utf-8", errors="surrogateescape")).is_file()
+        ]
+    return [
+        path for path in root.rglob("*")
+        if path.is_file()
+        and not (set(path.relative_to(root).parts) & FALLBACK_SKIP_PARTS)
+    ]
+
+
 def render() -> str:
     paths = sorted(
-        (
-            path for path in ROOT.rglob("*")
-            if path.is_file()
-            and path != MANIFEST
-            and not (set(path.relative_to(ROOT).parts) & SKIP_PARTS)
-        ),
+        (path for path in public_files() if path != MANIFEST),
         key=lambda path: path.relative_to(ROOT).as_posix().casefold(),
     )
     return "".join(
