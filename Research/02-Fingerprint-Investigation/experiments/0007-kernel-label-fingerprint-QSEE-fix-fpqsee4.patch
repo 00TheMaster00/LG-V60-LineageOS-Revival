@@ -1,0 +1,18 @@
+From 39bfb0eecc61ab36f965b82c6438c44ee684a554 Mon Sep 17 00:00:00 2001
+From: The1-Master <315181980+The1-Master@users.noreply.github.com>
+Date: Mon, 10 Aug 2026 06:42:16 +0500
+Subject: [PATCH 7/8] kernel: label fingerprint QSEE fix fpqsee4
+
+---
+ localversion-v60fpqsee1 | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-v60fpqsee1 b/localversion-v60fpqsee1
+index d4d53806b1c6..723be1e1958f 100644
+--- a/localversion-v60fpqsee1
++++ b/localversion-v60fpqsee1
+@@ -1 +1 @@
+--fpqsee3
++-fpqsee4
+-- 
+2.43.0

@@ -1,0 +1,7 @@
+#!/data/data/com.termux/files/usr/bin/bash
+clear
+su -c "/data/adb/v60profiles/wrapper.sh cpu"
+echo
+echo "CPU MAX is active. GPU remains adaptive at up to 587 MHz."
+echo
+read -r -p "Press Enter to close..."

@@ -1,0 +1,66 @@
+From 27f36e7df45014f88d5f2ac51fd0d110669d7da6 Mon Sep 17 00:00:00 2001
+From: The1-Master <315181980+The1-Master@users.noreply.github.com>
+Date: Mon, 10 Aug 2026 06:57:47 +0500
+Subject: [PATCH 8/8] qseecom: retry rejected Egistec whitelist commands
+
+---
+ drivers/misc/qseecom.c  | 28 ++++++++++++++++++++++++++--
+ localversion-v60fpqsee1 |  2 +-
+ 2 files changed, 27 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/misc/qseecom.c b/drivers/misc/qseecom.c
+index 15882c6b2974..b3825056d4dd 100644
+--- a/drivers/misc/qseecom.c
++++ b/drivers/misc/qseecom.c
+@@ -3703,6 +3703,7 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
+ 	unsigned long flags;
+ 	struct qseecom_registered_app_list *ptr_app;
+ 	bool found_app = false;
++	bool egista_whitelist_retry = false;
+ 	void *cmd_buf = NULL;
+ 	size_t cmd_len;
+ 	struct sglist_info *table = data->sglistinfo_ptr;
+@@ -3817,9 +3818,32 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
+ 	ret = qseecom_scm_call(SCM_SVC_TZSCHEDULER, 1,
+ 				cmd_buf, cmd_len,
+ 				&resp, sizeof(resp));
++	/*
++	 * A whitelist scheduler rejection happens before the TA executes.  Some
++	 * cross-flashed timelm firmware accepts Egistec's early whitelist calls
++	 * but rejects later modified-buffer layouts with SCM EINVAL.  Retry only
++	 * that pre-TA failure through the legacy scheduler command; successful
++	 * whitelist calls and every other QSEE client remain unchanged.
++	 */
++	if ((ret == -EINVAL) && is_phys_adr && qseecom.whitelist_support &&
++			!data->use_legacy_cmd &&
++			!strcmp(data->client.app_name, "egista") &&
++			(*(uint32_t *)cmd_buf ==
++			 QSEOS_CLIENT_SEND_DATA_COMMAND_WHITELIST)) {
++		pr_warn_ratelimited("egista whitelist rejected; retrying legacy scheduler command\n");
++		*(uint32_t *)cmd_buf = QSEOS_CLIENT_SEND_DATA_COMMAND;
++		memset(&resp, 0, sizeof(resp));
++		ret = qseecom_scm_call(SCM_SVC_TZSCHEDULER, 1,
++					cmd_buf, cmd_len,
++					&resp, sizeof(resp));
++		egista_whitelist_retry = true;
++		if (!ret)
++			pr_info_ratelimited("egista legacy scheduler retry accepted\n");
++	}
+ 	if (ret) {
+-		pr_err("scm_call() failed with err: %d (app_id = %d)\n",
+-					ret, data->client.app_id);
++		pr_err("scm_call() failed with err: %d (app_id = %d, legacy_retry = %d)\n",
++					ret, data->client.app_id,
++					egista_whitelist_retry);
+ 		goto exit;
+ 	}
+ 
+diff --git a/localversion-v60fpqsee1 b/localversion-v60fpqsee1
+index 723be1e1958f..7d17c028f6e5 100644
+--- a/localversion-v60fpqsee1
++++ b/localversion-v60fpqsee1
+@@ -1 +1 @@
+--fpqsee4
++-fpqsee5
+-- 
+2.43.0

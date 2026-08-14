@@ -1,0 +1,5 @@
+# Pinned and hash-locked for CPython source/wheel resolution through pip.
+# If your platform cannot use this artifact, create an isolated environment,
+# install bsdiff4==1.2.6, and independently inspect/verify the package source.
+bsdiff4==1.2.6 \
+    --hash=sha256:2ab57d01a78b39e29e5accc9cfead4130982ded9dccbc4261bd0e9c51d6b751d

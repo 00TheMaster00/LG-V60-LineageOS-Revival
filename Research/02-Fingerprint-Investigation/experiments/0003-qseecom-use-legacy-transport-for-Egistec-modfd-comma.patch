@@ -1,0 +1,41 @@
+From 20744a7e49d965f11992a02be10b77d0d8bcce61 Mon Sep 17 00:00:00 2001
+From: The1-Master <315181980+The1-Master@users.noreply.github.com>
+Date: Mon, 10 Aug 2026 05:28:59 +0500
+Subject: [PATCH 3/8] qseecom: use legacy transport for Egistec modfd commands
+
+---
+ drivers/misc/qseecom.c  | 10 +++++++++-
+ localversion-v60fpqsee1 |  1 +
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+ create mode 100644 localversion-v60fpqsee1
+
+diff --git a/drivers/misc/qseecom.c b/drivers/misc/qseecom.c
+index 4808407839d7..db0af2cde646 100644
+--- a/drivers/misc/qseecom.c
++++ b/drivers/misc/qseecom.c
+@@ -3798,7 +3798,15 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
+ 		cmd_len = sizeof(struct qseecom_client_send_data_64bit_ireq);
+ 	}
+ 
+-	if (!qseecom.whitelist_support || data->use_legacy_cmd)
++	/*
++	 * Some timelm firmware combinations advertise QSEE whitelist support,
++	 * but reject Egistec's modified-buffer commands in the scheduler. The
++	 * legacy transport carries the same request without the unsupported
++	 * whitelist metadata. Keep the workaround limited to physical-buffer
++	 * requests from the Egistec TA so every other QSEE client is unchanged.
++	 */
++	if (!qseecom.whitelist_support || data->use_legacy_cmd ||
++	    (is_phys_adr && !strcmp(data->client.app_name, "egista")))
+ 		*(uint32_t *)cmd_buf = QSEOS_CLIENT_SEND_DATA_COMMAND;
+ 	else
+ 		*(uint32_t *)cmd_buf = QSEOS_CLIENT_SEND_DATA_COMMAND_WHITELIST;
+diff --git a/localversion-v60fpqsee1 b/localversion-v60fpqsee1
+new file mode 100644
+index 000000000000..1bab4bb5dbe9
+--- /dev/null
++++ b/localversion-v60fpqsee1
+@@ -0,0 +1 @@
++-fpqsee1
+-- 
+2.43.0

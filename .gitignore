@@ -1,0 +1,32 @@
+# User-supplied and generated Camera material
+DIY/06-LG-Camera/input/
+DIY/06-LG-Camera/output/
+*.apk
+*.apks
+*.idsig
+
+# Proprietary firmware and private recovery material
+*.kdz
+*.dz
+*.tot
+*.qcn
+*.xqcn
+*.img
+*.bin
+*.elf
+*.mbn
+*.key
+*.keystore
+*.jks
+
+# User configuration and logs
+project.env
+*.local.*
+private/
+logs/
+__pycache__/
+*.pyc
+.venv/
+.idea/
+.vscode/
+

@@ -1,0 +1,31 @@
+name: Validate public release
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install camera patch dependency
+        run: python -m pip install --no-binary=bsdiff4 --require-hashes -r DIY/06-LG-Camera/requirements-camera-hashed.txt
+      - name: Camera builder unit tests
+        run: python -m unittest discover -s DIY/06-LG-Camera/tests -v
+      - name: Performance workflow tests
+        run: bash DIY/05-Performance-Kernel/workflow/tests/syntax-check.sh
+      - name: Recovery tool tests
+        run: python -m unittest discover -s DIY/01-Recovery-Backup/tests -v
+      - name: Public-data audit
+        run: python tools/audit_public_release.py
+      - name: Markdown links
+        run: python tools/check_markdown_links.py
+      - name: Release manifest
+        run: python tools/generate_release_manifest.py --check

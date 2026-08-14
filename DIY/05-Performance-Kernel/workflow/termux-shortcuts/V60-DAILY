@@ -1,0 +1,7 @@
+#!/data/data/com.termux/files/usr/bin/bash
+clear
+su -c "/data/adb/v60profiles/wrapper.sh daily"
+echo
+echo "Clean post-reboot Daily defaults are restored."
+echo
+read -r -p "Press Enter to close..."

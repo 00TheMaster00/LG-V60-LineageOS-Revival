@@ -1,0 +1,119 @@
+From 9a7254d4b0eda13fa413ee5670437afff4db6beb Mon Sep 17 00:00:00 2001
+From: The1-Master <315181980+The1-Master@users.noreply.github.com>
+Date: Mon, 10 Aug 2026 06:12:38 +0500
+Subject: [PATCH 5/8] qseecom: use shmbridge for Egistec modfd buffers
+
+---
+ drivers/misc/qseecom.c  | 71 +++++++++++++++++++++++++++++------------
+ localversion-v60fpqsee1 |  2 +-
+ 2 files changed, 51 insertions(+), 22 deletions(-)
+
+diff --git a/drivers/misc/qseecom.c b/drivers/misc/qseecom.c
+index a07afcbca734..93c249e77c3a 100644
+--- a/drivers/misc/qseecom.c
++++ b/drivers/misc/qseecom.c
+@@ -4359,8 +4359,10 @@ static int __qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
+ 	struct qseecom_send_modfd_cmd_req req;
+ 	struct qseecom_send_cmd_req send_cmd_req;
+ 	void *origin_req_buf_kvirt, *origin_rsp_buf_kvirt;
++	u32 tzbuflen;
+ 	phys_addr_t pa;
+ 	u8 *va = NULL;
++	struct qtee_shm shm = {0};
+ 
+ 	ret = copy_from_user(&req, argp, sizeof(req));
+ 	if (ret) {
+@@ -4392,36 +4394,63 @@ static int __qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
+ 				(uintptr_t)req.resp_buf);
+ 
+ 	/*
+-	 * The Egistec TA shipped for timelm expects modified-buffer commands to
+-	 * use the QSEE client's registered shared buffer.  Newer QSEECom code
+-	 * copies the request into a temporary dma_alloc_coherent() buffer first;
+-	 * the cross-flashed secure firmware rejects that buffer at the scheduler
+-	 * boundary with -EINVAL before the TA sees the request.  Retain the newer
+-	 * path for every other client and restore the original registered-buffer
+-	 * transport only for egista.
++	 * The cross-flashed secure firmware rejects both dma_alloc_coherent()
++	 * memory and the client's dma-buf for Egistec modified-buffer requests.
++	 * Allocate those request/response pages through qtee_shmbridge so they
++	 * are explicitly registered with TrustZone.  Keep every other QSEE client
++	 * on the standard coherent-buffer path.
+ 	 */
+ 	if (!strcmp(data->client.app_name, "egista")) {
+-		req.cmd_req_buf = origin_req_buf_kvirt;
+-		req.resp_buf = origin_rsp_buf_kvirt;
+-		pr_info_ratelimited("egista modfd: using registered client buffer\n");
++		tzbuflen = PAGE_ALIGN(req.cmd_req_len + req.resp_len);
++		va = __qseecom_alloc_tzbuf(tzbuflen, &pa, &shm);
++		if (!va) {
++			pr_err("egista modfd: failed to allocate shmbridge buffer\n");
++			return -ENOMEM;
++		}
++
++		req.cmd_req_buf = va;
++		send_cmd_req.cmd_req_buf = (void *)pa;
++		req.resp_buf = va + req.cmd_req_len;
++		send_cmd_req.resp_buf = (void *)pa + req.cmd_req_len;
++		memcpy(req.cmd_req_buf, origin_req_buf_kvirt, req.cmd_req_len);
++		memcpy(req.resp_buf, origin_rsp_buf_kvirt, req.resp_len);
++		pr_info_ratelimited("egista modfd: using qtee shmbridge buffer\n");
+ 
+ 		if (!is_64bit_addr) {
+ 			ret = __qseecom_update_cmd_buf(&req, false, data);
+ 			if (ret)
+-				return ret;
+-			ret = __qseecom_send_cmd(data, &send_cmd_req, false);
++				goto out_egista;
++			dmac_flush_range(req.cmd_req_buf,
++					req.cmd_req_buf + tzbuflen);
++			ret = __qseecom_send_cmd(data, &send_cmd_req, true);
++			dmac_flush_range(req.cmd_req_buf,
++					req.cmd_req_buf + tzbuflen);
+ 			if (ret)
+-				return ret;
+-			return __qseecom_update_cmd_buf(&req, true, data);
++				goto out_egista;
++			ret = __qseecom_update_cmd_buf(&req, true, data);
++		} else {
++			ret = __qseecom_update_cmd_buf_64(&req, false, data);
++			if (ret)
++				goto out_egista;
++			dmac_flush_range(req.cmd_req_buf,
++					req.cmd_req_buf + tzbuflen);
++			ret = __qseecom_send_cmd(data, &send_cmd_req, true);
++			dmac_flush_range(req.cmd_req_buf,
++					req.cmd_req_buf + tzbuflen);
++			if (ret)
++				goto out_egista;
++			ret = __qseecom_update_cmd_buf_64(&req, true, data);
+ 		}
+ 
+-		ret = __qseecom_update_cmd_buf_64(&req, false, data);
+-		if (ret)
+-			return ret;
+-		ret = __qseecom_send_cmd(data, &send_cmd_req, false);
+-		if (ret)
+-			return ret;
+-		return __qseecom_update_cmd_buf_64(&req, true, data);
++		if (!ret) {
++			memcpy(origin_rsp_buf_kvirt, req.resp_buf, req.resp_len);
++			memcpy(origin_req_buf_kvirt, req.cmd_req_buf,
++					req.cmd_req_len);
++		}
++
++out_egista:
++		__qseecom_free_tzbuf(&shm);
++		return ret;
+ 	}
+ 
+ 	/* Allocate kernel buffer for request and response*/
+diff --git a/localversion-v60fpqsee1 b/localversion-v60fpqsee1
+index 94ba5e000307..d4d53806b1c6 100644
+--- a/localversion-v60fpqsee1
++++ b/localversion-v60fpqsee1
+@@ -1 +1 @@
+--fpqsee2
++-fpqsee3
+-- 
+2.43.0

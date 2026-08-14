@@ -1,0 +1,129 @@
+From abb26dbd20378a00a157f15b135b4dca888fd384 Mon Sep 17 00:00:00 2001
+From: The1-Master <315181980+The1-Master@users.noreply.github.com>
+Date: Mon, 10 Aug 2026 06:35:27 +0500
+Subject: [PATCH 6/8] qseecom: keep Egistec whitelist buffers below 4G
+
+---
+ drivers/misc/qseecom.c | 67 ++++++++++++++++++++++++++++--------------
+ 1 file changed, 45 insertions(+), 22 deletions(-)
+
+diff --git a/drivers/misc/qseecom.c b/drivers/misc/qseecom.c
+index 93c249e77c3a..15882c6b2974 100644
+--- a/drivers/misc/qseecom.c
++++ b/drivers/misc/qseecom.c
+@@ -4359,10 +4359,13 @@ static int __qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
+ 	struct qseecom_send_modfd_cmd_req req;
+ 	struct qseecom_send_cmd_req send_cmd_req;
+ 	void *origin_req_buf_kvirt, *origin_rsp_buf_kvirt;
+-	u32 tzbuflen;
++	u32 egista_buflen;
++	u32 egista_alloc_len;
+ 	phys_addr_t pa;
++	phys_addr_t egista_sg_pa;
+ 	u8 *va = NULL;
+-	struct qtee_shm shm = {0};
++	struct sglist_info *origin_sglistinfo_ptr;
++	phys_addr_t origin_sglistinfo_pa;
+ 
+ 	ret = copy_from_user(&req, argp, sizeof(req));
+ 	if (ret) {
+@@ -4394,37 +4397,58 @@ static int __qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
+ 				(uintptr_t)req.resp_buf);
+ 
+ 	/*
+-	 * The cross-flashed secure firmware rejects both dma_alloc_coherent()
+-	 * memory and the client's dma-buf for Egistec modified-buffer requests.
+-	 * Allocate those request/response pages through qtee_shmbridge so they
+-	 * are explicitly registered with TrustZone.  Keep every other QSEE client
+-	 * on the standard coherent-buffer path.
++	 * Egistec is a 32-bit TA.  The generic qtee_shmbridge pool can be placed
++	 * above 4G on this target, including the per-client sglist table allocated
++	 * from it.  Put the request, response and sglist table together in the
++	 * device's low qseecom CMA pool, which is already registered as a bridge
++	 * with TrustZone.  Keep every other QSEE client on the standard path.
+ 	 */
+ 	if (!strcmp(data->client.app_name, "egista")) {
+-		tzbuflen = PAGE_ALIGN(req.cmd_req_len + req.resp_len);
+-		va = __qseecom_alloc_tzbuf(tzbuflen, &pa, &shm);
+-		if (!va) {
+-			pr_err("egista modfd: failed to allocate shmbridge buffer\n");
+-			return -ENOMEM;
++		if (req.cmd_req_len > U32_MAX - req.resp_len -
++					SGLISTINFO_TABLE_SIZE) {
++			pr_err("egista modfd: combined buffer size overflow\n");
++			return -EINVAL;
++		}
++
++		egista_buflen = req.cmd_req_len + req.resp_len +
++				SGLISTINFO_TABLE_SIZE;
++		egista_alloc_len = (egista_buflen + PAGE_SIZE) & PAGE_MASK;
++		ret = __qseecom_alloc_coherent_buf(egista_buflen, &va, &pa);
++		if (ret) {
++			pr_err("egista modfd: failed to allocate low qseecom buffer: %d\n",
++				ret);
++			return ret;
++		}
++
++		if ((data->client.app_arch == ELFCLASS32) &&
++				(pa >= PHY_ADDR_4G - egista_alloc_len)) {
++			pr_err("egista modfd: low qseecom buffer exceeds 4G: pa=%pa, len=%x\n",
++				&pa, egista_alloc_len);
++			ret = -EFAULT;
++			goto out_egista_free;
+ 		}
+ 
++		memset(va, 0, egista_buflen);
+ 		req.cmd_req_buf = va;
+ 		send_cmd_req.cmd_req_buf = (void *)pa;
+ 		req.resp_buf = va + req.cmd_req_len;
+ 		send_cmd_req.resp_buf = (void *)pa + req.cmd_req_len;
++		egista_sg_pa = pa + req.cmd_req_len + req.resp_len;
++		origin_sglistinfo_ptr = data->sglistinfo_ptr;
++		origin_sglistinfo_pa = data->sglistinfo_shm.paddr;
++		data->sglistinfo_ptr = (struct sglist_info *)(va +
++				req.cmd_req_len + req.resp_len);
++		data->sglistinfo_shm.paddr = egista_sg_pa;
+ 		memcpy(req.cmd_req_buf, origin_req_buf_kvirt, req.cmd_req_len);
+ 		memcpy(req.resp_buf, origin_rsp_buf_kvirt, req.resp_len);
+-		pr_info_ratelimited("egista modfd: using qtee shmbridge buffer\n");
++		pr_info_ratelimited("egista modfd: using low qseecom buffer req_pa=%pa sg_pa=%pa\n",
++			&pa, &egista_sg_pa);
+ 
+ 		if (!is_64bit_addr) {
+ 			ret = __qseecom_update_cmd_buf(&req, false, data);
+ 			if (ret)
+ 				goto out_egista;
+-			dmac_flush_range(req.cmd_req_buf,
+-					req.cmd_req_buf + tzbuflen);
+ 			ret = __qseecom_send_cmd(data, &send_cmd_req, true);
+-			dmac_flush_range(req.cmd_req_buf,
+-					req.cmd_req_buf + tzbuflen);
+ 			if (ret)
+ 				goto out_egista;
+ 			ret = __qseecom_update_cmd_buf(&req, true, data);
+@@ -4432,11 +4456,7 @@ static int __qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
+ 			ret = __qseecom_update_cmd_buf_64(&req, false, data);
+ 			if (ret)
+ 				goto out_egista;
+-			dmac_flush_range(req.cmd_req_buf,
+-					req.cmd_req_buf + tzbuflen);
+ 			ret = __qseecom_send_cmd(data, &send_cmd_req, true);
+-			dmac_flush_range(req.cmd_req_buf,
+-					req.cmd_req_buf + tzbuflen);
+ 			if (ret)
+ 				goto out_egista;
+ 			ret = __qseecom_update_cmd_buf_64(&req, true, data);
+@@ -4449,7 +4469,10 @@ static int __qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
+ 		}
+ 
+ out_egista:
+-		__qseecom_free_tzbuf(&shm);
++		data->sglistinfo_ptr = origin_sglistinfo_ptr;
++		data->sglistinfo_shm.paddr = origin_sglistinfo_pa;
++out_egista_free:
++		__qseecom_free_coherent_buf(egista_buflen, va, pa);
+ 		return ret;
+ 	}
+ 
+-- 
+2.43.0

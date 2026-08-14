@@ -1,0 +1,80 @@
+From d61c4c6c4b9044ad47e9e3823fdc252080e3225b Mon Sep 17 00:00:00 2001
+From: The1-Master <315181980+The1-Master@users.noreply.github.com>
+Date: Mon, 10 Aug 2026 05:58:00 +0500
+Subject: [PATCH 4/8] qseecom: use registered buffer for Egistec modfd commands
+
+---
+ drivers/misc/qseecom.c  | 43 ++++++++++++++++++++++++++++++++---------
+ localversion-v60fpqsee1 |  2 +-
+ 2 files changed, 35 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/misc/qseecom.c b/drivers/misc/qseecom.c
+index db0af2cde646..a07afcbca734 100644
+--- a/drivers/misc/qseecom.c
++++ b/drivers/misc/qseecom.c
+@@ -3798,15 +3798,7 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
+ 		cmd_len = sizeof(struct qseecom_client_send_data_64bit_ireq);
+ 	}
+ 
+-	/*
+-	 * Some timelm firmware combinations advertise QSEE whitelist support,
+-	 * but reject Egistec's modified-buffer commands in the scheduler. The
+-	 * legacy transport carries the same request without the unsupported
+-	 * whitelist metadata. Keep the workaround limited to physical-buffer
+-	 * requests from the Egistec TA so every other QSEE client is unchanged.
+-	 */
+-	if (!qseecom.whitelist_support || data->use_legacy_cmd ||
+-	    (is_phys_adr && !strcmp(data->client.app_name, "egista")))
++	if (!qseecom.whitelist_support || data->use_legacy_cmd)
+ 		*(uint32_t *)cmd_buf = QSEOS_CLIENT_SEND_DATA_COMMAND;
+ 	else
+ 		*(uint32_t *)cmd_buf = QSEOS_CLIENT_SEND_DATA_COMMAND_WHITELIST;
+@@ -4399,6 +4391,39 @@ static int __qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
+ 	origin_rsp_buf_kvirt = (void *)__qseecom_uvirt_to_kvirt(data,
+ 				(uintptr_t)req.resp_buf);
+ 
++	/*
++	 * The Egistec TA shipped for timelm expects modified-buffer commands to
++	 * use the QSEE client's registered shared buffer.  Newer QSEECom code
++	 * copies the request into a temporary dma_alloc_coherent() buffer first;
++	 * the cross-flashed secure firmware rejects that buffer at the scheduler
++	 * boundary with -EINVAL before the TA sees the request.  Retain the newer
++	 * path for every other client and restore the original registered-buffer
++	 * transport only for egista.
++	 */
++	if (!strcmp(data->client.app_name, "egista")) {
++		req.cmd_req_buf = origin_req_buf_kvirt;
++		req.resp_buf = origin_rsp_buf_kvirt;
++		pr_info_ratelimited("egista modfd: using registered client buffer\n");
++
++		if (!is_64bit_addr) {
++			ret = __qseecom_update_cmd_buf(&req, false, data);
++			if (ret)
++				return ret;
++			ret = __qseecom_send_cmd(data, &send_cmd_req, false);
++			if (ret)
++				return ret;
++			return __qseecom_update_cmd_buf(&req, true, data);
++		}
++
++		ret = __qseecom_update_cmd_buf_64(&req, false, data);
++		if (ret)
++			return ret;
++		ret = __qseecom_send_cmd(data, &send_cmd_req, false);
++		if (ret)
++			return ret;
++		return __qseecom_update_cmd_buf_64(&req, true, data);
++	}
++
+ 	/* Allocate kernel buffer for request and response*/
+ 	ret = __qseecom_alloc_coherent_buf(req.cmd_req_len + req.resp_len,
+ 					&va, &pa);
+diff --git a/localversion-v60fpqsee1 b/localversion-v60fpqsee1
+index 1bab4bb5dbe9..94ba5e000307 100644
+--- a/localversion-v60fpqsee1
++++ b/localversion-v60fpqsee1
+@@ -1 +1 @@
+--fpqsee1
++-fpqsee2
+-- 
+2.43.0

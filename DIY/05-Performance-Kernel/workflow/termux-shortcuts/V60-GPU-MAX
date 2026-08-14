@@ -1,0 +1,7 @@
+#!/data/data/com.termux/files/usr/bin/bash
+clear
+su -c "/data/adb/v60profiles/wrapper.sh gpu"
+echo
+echo "GPU MAX 670 MHz and maximum GPU bandwidth are active."
+echo
+read -r -p "Press Enter to close..."

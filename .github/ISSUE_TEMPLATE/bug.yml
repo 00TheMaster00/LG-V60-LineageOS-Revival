@@ -1,0 +1,50 @@
+name: Reproduction result or bug
+description: Report a sanitized result from this LG V60 workflow.
+title: "[Result] "
+labels: ["reproduction"]
+body:
+  - type: markdown
+    attributes:
+      value: Do not attach partitions, QCN/EFS, DRM/persist, APKs, serials, IMEI, phone numbers, faces, GPS EXIF, or private logs.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Recovery/cross-flash
+        - Radio
+        - Fingerprint
+        - Performance kernel
+        - LG Camera
+        - Documentation/tooling
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Exact public model/variant
+      placeholder: A001LG, LM-V600EA, LM-V600TM, etc.
+    validations:
+      required: true
+  - type: input
+    id: builds
+    attributes:
+      label: ROM and vendor build
+      description: Sanitize anything device-specific.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps and result
+      description: State which hash/checkpoint passed and whether output or only UI entry was proven.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I removed device identifiers, private partitions, proprietary APK/firmware and user media.
+          required: true
+
