@@ -15,9 +15,13 @@ SKIP_PARTS = {".git", ".venv", "__pycache__", "input", "output", "private", "log
 
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(8 * 1024 * 1024):
-            digest.update(chunk)
+    data = path.read_bytes()
+    # .gitattributes fixes repository text at LF. Normalize the Windows
+    # working tree to those canonical committed bytes so the manifest is
+    # identical on Windows and Linux. The bsdiff artifact stays byte-exact.
+    if path.suffix.lower() != ".bsdiff":
+        data = data.replace(b"\r\n", b"\n")
+    digest.update(data)
     return digest.hexdigest().upper()
 
 
@@ -52,4 +56,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
