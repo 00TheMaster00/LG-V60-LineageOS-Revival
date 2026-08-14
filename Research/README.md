@@ -12,8 +12,8 @@ fixes.
 6. [Charging finding](05-Charging-Finding.md)
 7. [Sources and community links](06-Sources-and-Links.md)
 8. [Known limits and next research](07-Known-Limits.md)
+9. [EDL recovery automation findings](08-EDL-Recovery-Automation.md)
 
 Raw device partitions, APKs, private logs and user media are absent. The
 public evidence is a sanitized result ledger plus reproducible hashes,
 patches and tests.
-

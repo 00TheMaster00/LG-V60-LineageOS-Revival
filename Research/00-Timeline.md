@@ -89,3 +89,6 @@
   logs.
 - Verified that the public camera delta reconstructs the exact Candidate 24
   APK from the exact stock input.
+- Imported and integrity-checked two additional private engineering handoffs.
+  Their raw scripts/evidence remained private; the reusable EDL transaction
+  design was converted into sanitized public documentation.

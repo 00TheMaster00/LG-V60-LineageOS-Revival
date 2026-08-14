@@ -127,3 +127,6 @@ the names expose device-specific information.
 
 Only after every item passes should you continue to cross-flash or recovery.
 
+If a later repair genuinely requires a partition write, follow the
+[Safe EDL Write Transaction](EDL-WRITE-TRANSACTION.md) so the operation has a
+live-map proof, immediate backup, exact readback, and unchanged-witness check.
