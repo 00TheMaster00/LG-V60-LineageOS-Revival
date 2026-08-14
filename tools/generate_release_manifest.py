@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
 from pathlib import Path
 
@@ -46,6 +47,13 @@ def main() -> int:
         actual = MANIFEST.read_text(encoding="utf-8") if MANIFEST.is_file() else ""
         if actual != expected:
             print("SHA256SUMS.txt is missing or stale")
+            print("".join(difflib.unified_diff(
+                actual.splitlines(keepends=True),
+                expected.splitlines(keepends=True),
+                fromfile="committed/SHA256SUMS.txt",
+                tofile="current-tree/SHA256SUMS.txt",
+                n=1,
+            )))
             return 1
         print("SHA256SUMS.txt: PASS")
         return 0
